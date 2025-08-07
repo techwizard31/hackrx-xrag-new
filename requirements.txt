@@ -18,3 +18,4 @@ deepeval
 pypdf
 Flask
 llama-cloud-services
+pinecone-client
