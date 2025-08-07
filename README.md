@@ -1,6 +1,6 @@
 # Tasks
 
-1. update faiss to pinecone                     - Bob
+1. update faiss to pinecone                     - Bob (in progress)
 
 3. fastapi endpoints                            - Ista
 4. create dockerfile                            - Soham

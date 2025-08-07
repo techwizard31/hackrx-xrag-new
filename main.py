@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # Set the OpenAI API key environment variable
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -16,7 +17,6 @@ from fastapi.responses import JSONResponse
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import networkx as nx
-from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
@@ -50,6 +50,7 @@ from parser.PDFParser import PDFParser
 from utils.helpers import *
 from models.graph_rag import GraphRAG
 
+
 app = FastAPI(title="PDF to Markdown Converter", version="1.0.0")
 
 app.add_middleware(
@@ -59,7 +60,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 parser = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
 

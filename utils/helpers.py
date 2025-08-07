@@ -21,3 +21,5 @@ def document_splitter(text_splitter, result):
             )
             all_chunks.append(langchain_doc)
     return all_chunks
+
+
