@@ -52,7 +52,11 @@ LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 uri = os.getenv("MONGO_URI")
 # client = MongoClient(uri, server_api=ServerApi('1'))
 
-app = FastAPI(title="PDF to Markdown Converter", version="1.0.0")
+app = FastAPI(
+    title="PDF to Markdown Converter",
+    version="1.0.0",
+    root_path="/api/v1"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -181,7 +185,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
-@app.post("/api/v1/hackrx/run")
+@app.post("/hackrx/run")
 async def hackrx_run(request: HackrxRequest):
     try:
         # Extract PDF URL and questions from request
