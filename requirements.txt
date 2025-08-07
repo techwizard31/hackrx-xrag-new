@@ -4,6 +4,7 @@ langchain
 langchain-openai
 langchain-community
 langchain-core
+langchain-pinecone
 matplotlib
 networkx
 nltk
@@ -18,4 +19,4 @@ deepeval
 pypdf
 Flask
 llama-cloud-services
-pinecone-client
+pinecone

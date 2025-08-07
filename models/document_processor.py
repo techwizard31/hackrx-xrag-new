@@ -2,6 +2,7 @@ from graphr.helper_functions import *
 from graphr.evaluation.evalute_rag import *
 from sklearn.metrics.pairwise import cosine_similarity
 
+
 # Define the DocumentProcessor class
 class DocumentProcessor:
     def __init__(self):

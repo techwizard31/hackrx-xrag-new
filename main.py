@@ -3,13 +3,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # Set the OpenAI API key environment variable
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 
 import networkx as nx
-from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
@@ -41,6 +41,7 @@ nltk.download('wordnet', quiet=True)
 from parser.PDFParser import PDFParser
 from utils.helpers import *
 from models.graph_rag import GraphRAG
+
 
 parser = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
 
