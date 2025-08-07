@@ -1,8 +1,9 @@
 # Tasks
 
-1. Bob: update faiss to pinecone
-2. Remove deprecated versions to newer versions
-3. fastapi endpoints
-4. create dockerfile
-5. deploy
-6. add db for non redundant parsing
+1. update faiss to pinecone                     - Bob
+2. Remove deprecated versions to newer versions - soham
+3. fastapi endpoints                            - Ista
+4. create dockerfile                            - Soham
+5. deploy                                       - Ista
+6. add db for non redundant parsing             - Ista
+7. building graph all the time                  - Soham
