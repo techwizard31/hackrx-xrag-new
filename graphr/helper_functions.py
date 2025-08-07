@@ -1,7 +1,7 @@
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
+from langchain.vectorstores import FAISS,Pinecone
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain import PromptTemplate
 from openai import RateLimitError
@@ -14,6 +14,9 @@ import textwrap
 import numpy as np
 from enum import Enum
 
+import pinecone
+import os
+index_name = "bajaj-hack"
 
 def replace_t_with_space(list_of_documents):
     """
@@ -45,7 +48,7 @@ def text_wrap(text, width=120):
     return textwrap.fill(text, width=width)
 
 
-def encode_pdf(path, chunk_size=1000, chunk_overlap=200):
+def encode_pdf(path,chunk_size=1000, chunk_overlap=200):
     """
     Encodes a PDF book into a vector store using OpenAI embeddings.
 
@@ -70,13 +73,20 @@ def encode_pdf(path, chunk_size=1000, chunk_overlap=200):
     cleaned_texts = replace_t_with_space(texts)
 
     # Create embeddings and vector store
+    pinecone.init(
+        api_key=os.environ.get("PINECONE_API_KEY"),
+        environment=os.environ.get("PINECONE_ENVIRONMENT")
+    )
     embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(cleaned_texts, embeddings)
+    # vectorstore = FAISS.from_documents(cleaned_texts, embeddings)
+    vectorstore = Pinecone.from_documents(cleaned_texts, embeddings, index_name=index_name)
+
+
 
     return vectorstore
 
 
-def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
+def encode_from_string(content,chunk_size=1000, chunk_overlap=200):
     """
     Encodes a string into a vector store using OpenAI embeddings.
 
@@ -92,7 +102,10 @@ def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
         ValueError: If the input content is not valid.
         RuntimeError: If there is an error during the encoding process.
     """
-
+    pinecone.init(
+        api_key=os.environ.get("PINECONE_API_KEY"),
+        environment=os.environ.get("PINECONE_ENVIRONMENT")
+    )
     if not isinstance(content, str) or not content.strip():
         raise ValueError("Content must be a non-empty string.")
 
@@ -118,7 +131,8 @@ def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
 
         # Generate embeddings and create the vector store
         embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(chunks, embeddings)
+        # vectorstore = FAISS.from_documents(chunks, embeddings)
+        vectorstore = Pinecone.from_documents(chunks, embeddings, index_name=index_name)
 
     except Exception as e:
         raise RuntimeError(f"An error occurred during the encoding process: {str(e)}")
