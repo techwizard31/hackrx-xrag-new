@@ -8,8 +8,9 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 from fastapi.responses import JSONResponse
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -185,8 +186,25 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
+VALID_API_KEY = os.getenv("API_SECRET_KEY")
+
+
+def verify_bearer_token(authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization format")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    if token != VALID_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    return token
+
 @app.post("/hackrx/run")
-async def hackrx_run(request: HackrxRequest):
+async def hackrx_run(request: HackrxRequest, token: str = Depends(verify_bearer_token)):
     try:
         # Extract PDF URL and questions from request
         pdf_url = request.documents
