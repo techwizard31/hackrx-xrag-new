@@ -9,12 +9,12 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
 
 import networkx as nx
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
-from langchain.callbacks import get_openai_callback
+from langchain_community.callbacks.manager import get_openai_callback
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -70,8 +70,7 @@ print("Parsed result loaded from 'parsed_result.pkl'.")
 # ==================================================+>
 
 docs = document_splitter(text_splitter, result)
-print(docs)
-
+# print(docs)
 
 graph_rag = GraphRAG()
 

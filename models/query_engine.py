@@ -3,7 +3,7 @@ from graphr.helper_functions import *
 from graphr.evaluation.evalute_rag import *
 from sklearn.metrics.pairwise import cosine_similarity
 import heapq
-from langchain.callbacks import get_openai_callback
+from langchain_community.callbacks.manager import get_openai_callback
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 

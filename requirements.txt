@@ -2,6 +2,8 @@ faiss-cpu
 futures
 langchain
 langchain-openai
+langchain-community
+langchain-core
 matplotlib
 networkx
 nltk
@@ -10,7 +12,6 @@ python-dotenv
 scikit-learn
 spacy
 tqdm
-langchain-community
 rank-bm25
 PyMuPDF
 deepeval
