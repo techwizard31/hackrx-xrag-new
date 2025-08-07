@@ -1,9 +1,10 @@
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain_core.pydantic_v1 import BaseModel, Field
-from langchain import PromptTemplate
+from langchain_community.vectorstores import FAISS, Pinecone
+# from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
+from langchain_core.prompts import PromptTemplate
 from openai import RateLimitError
 from typing import List
 from rank_bm25 import BM25Okapi
@@ -14,6 +15,9 @@ import textwrap
 import numpy as np
 from enum import Enum
 
+import pinecone
+import os
+index_name = "bajaj-hack"
 
 def replace_t_with_space(list_of_documents):
     """
@@ -45,7 +49,7 @@ def text_wrap(text, width=120):
     return textwrap.fill(text, width=width)
 
 
-def encode_pdf(path, chunk_size=1000, chunk_overlap=200):
+def encode_pdf(path,chunk_size=1000, chunk_overlap=200):
     """
     Encodes a PDF book into a vector store using OpenAI embeddings.
 
@@ -70,13 +74,20 @@ def encode_pdf(path, chunk_size=1000, chunk_overlap=200):
     cleaned_texts = replace_t_with_space(texts)
 
     # Create embeddings and vector store
+    pinecone.init(
+        api_key=os.environ.get("PINECONE_API_KEY"),
+        environment=os.environ.get("PINECONE_ENVIRONMENT")
+    )
     embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_documents(cleaned_texts, embeddings)
+    # vectorstore = FAISS.from_documents(cleaned_texts, embeddings)
+    vectorstore = Pinecone.from_documents(cleaned_texts, embeddings, index_name=index_name)
+
+
 
     return vectorstore
 
 
-def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
+def encode_from_string(content,chunk_size=1000, chunk_overlap=200):
     """
     Encodes a string into a vector store using OpenAI embeddings.
 
@@ -92,7 +103,10 @@ def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
         ValueError: If the input content is not valid.
         RuntimeError: If there is an error during the encoding process.
     """
-
+    pinecone.init(
+        api_key=os.environ.get("PINECONE_API_KEY"),
+        environment=os.environ.get("PINECONE_ENVIRONMENT")
+    )
     if not isinstance(content, str) or not content.strip():
         raise ValueError("Content must be a non-empty string.")
 
@@ -118,7 +132,8 @@ def encode_from_string(content, chunk_size=1000, chunk_overlap=200):
 
         # Generate embeddings and create the vector store
         embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(chunks, embeddings)
+        # vectorstore = FAISS.from_documents(chunks, embeddings)
+        vectorstore = Pinecone.from_documents(chunks, embeddings, index_name=index_name)
 
     except Exception as e:
         raise RuntimeError(f"An error occurred during the encoding process: {str(e)}")
@@ -152,7 +167,7 @@ def retrieve_context_per_question(question, chunks_query_retriever):
 class QuestionAnswerFromContext(BaseModel):
     """
     Model to generate an answer to a query based on a given context.
-    
+
     Attributes:
         answer_based_on_content (str): The generated answer based on the context.
     """
@@ -164,7 +179,7 @@ def create_question_answer_from_context_chain(llm):
     question_answer_from_context_llm = llm
 
     # Define the prompt template for chain-of-thought reasoning
-    question_answer_prompt_template = """ 
+    question_answer_prompt_template = """
     For the question below, provide a concise but suffice answer based ONLY on the provided context:
     {context}
     Question
@@ -276,10 +291,10 @@ def bm25_retrieval(bm25: BM25Okapi, cleaned_texts: List[str], query: str, k: int
 async def exponential_backoff(attempt):
     """
     Implements exponential backoff with a jitter.
-    
+
     Args:
         attempt: The current retry attempt number.
-        
+
     Waits for a period of time before retrying the operation.
     The wait time is calculated as (2^attempt) + a random fraction of a second.
     """
@@ -294,14 +309,14 @@ async def exponential_backoff(attempt):
 async def retry_with_exponential_backoff(coroutine, max_retries=5):
     """
     Retries a coroutine using exponential backoff upon encountering a RateLimitError.
-    
+
     Args:
         coroutine: The coroutine to be executed.
         max_retries: The maximum number of retry attempts.
-        
+
     Returns:
         The result of the coroutine if successful.
-        
+
     Raises:
         The last encountered exception if all retry attempts fail.
     """
