@@ -1,7 +1,7 @@
 # Tasks
 
 1. update faiss to pinecone                     - Bob
-2. Remove deprecated versions to newer versions - soham
+
 3. fastapi endpoints                            - Ista
 4. create dockerfile                            - Soham
 5. deploy                                       - Ista
