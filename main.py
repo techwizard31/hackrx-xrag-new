@@ -2,14 +2,11 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
+# print(os.getenv('OPENAI_API_KEY'))
 
 # Set the OpenAI API key environment variable
 os.environ["OPENAI_API_KEY"] = os.getenv('OPENAI_API_KEY')
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
-uri = os.getenv("MONGO_URI")
-client = MongoClient(uri, server_api=ServerApi('1'))
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +15,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import networkx as nx
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.messages import AIMessage  # Add this import at the top
 from langchain_core.prompts import PromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
@@ -50,6 +48,9 @@ from parser.PDFParser import PDFParser
 from utils.helpers import *
 from models.graph_rag import GraphRAG
 
+LLAMA_CLOUD_API_KEY = os.getenv("LLAMA_CLOUD_API_KEY")
+uri = os.getenv("MONGO_URI")
+# client = MongoClient(uri, server_api=ServerApi('1'))
 
 app = FastAPI(title="PDF to Markdown Converter", version="1.0.0")
 
@@ -65,43 +66,46 @@ parser = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
 
 @app.get("/")
 async def root():
-    try:
-        client.admin.command('ping')
-        print("✅ Connected to MongoDB!")
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Failed to connect to MongoDB")
+    # client = MongoClient(uri, server_api=ServerApi('1'))
 
-    db = client["llama_docs"]
-    collection = db["parsed_pdfs"]
+    # try:
+    #     client.admin.command('ping')
+    #     print("✅ Connected to MongoDB!")
+    # except Exception as e:
+    #     print(e)
+    #     raise HTTPException(status_code=500, detail="Failed to connect to MongoDB")
 
-    pdf_url = "https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
+    # db = client["llama_docs"]
+    # collection = db["parsed_pdfs"]
 
-    # Check MongoDB
-    existing = collection.find_one({"url": pdf_url})
-    if existing:
-        print("📄 Parsed result fetched from DB")
-        parsed_text = existing["parsed"]
-    else:
-        # Parse using LlamaParse
-        parser = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
-        result = parser.parse_pdf(pdf_url)
-        parsed_text = [doc.text for doc in result]
+    # pdf_url = "https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D"
 
-        # Save to MongoDB
-        collection.insert_one({"url": pdf_url, "parsed": parsed_text})
-        print("✅ Parsed and stored in DB")
+    # # Check MongoDB
+    # existing = collection.find_one({"url": pdf_url})
+    # if existing:
+    #     print("📄 Parsed result fetched from DB")
+    #     parsed_text = existing["parsed"]
+    # else:
+    #     # Parse using LlamaParse
+    #     parser = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
+    #     result = parser.parse_pdf(pdf_url)
+    #     parsed_text = [doc.text for doc in result]
 
-        # Optionally save to .pkl
-        # with open("parsed_result.pkl", "wb") as f:
-        #     pickle.dump(result, f)
-        # print("💾 Saved parsed result to 'parsed_result.pkl'")
+    #     # Save to MongoDB
+    #     collection.insert_one({"url": pdf_url, "parsed": parsed_text})
+    #     print("✅ Parsed and stored in DB")
 
-    # If you prefer to read from file (fallback):
-    if not existing:
-        with open("parsed_result.pkl", "rb") as f:
-            result = pickle.load(f)
-        print("📂 Loaded parsed result from 'parsed_result.pkl'")
+    #     # Optionally save to .pkl
+    #     # with open("parsed_result.pkl", "wb") as f:
+    #     #     pickle.dump(result, f)
+    #     # print("💾 Saved parsed result to 'parsed_result.pkl'")
+
+    # # If you prefer to read from file (fallback):
+    import pickle
+    # if not existing:
+    with open("parsed_result.pkl", "rb") as f:
+        result = pickle.load(f)
+    print("📂 Loaded parsed result from 'parsed_result.pkl'")
 
     # === Chunking and GraphRAG Processing ===
     text_splitter = RecursiveCharacterTextSplitter(
@@ -160,3 +164,103 @@ async def root():
 # print("=======================+>")
 # print("\n")
 # print(response)
+
+
+from pydantic import BaseModel
+from typing import List
+
+# Add these request/response models
+class HackrxRequest(BaseModel):
+    documents: str
+    questions: List[str]
+
+class HackrxResponse(BaseModel):
+    answers: List[str]
+
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
+@app.post("/api/v1/hackrx/run")
+async def hackrx_run(request: HackrxRequest):
+    try:
+        # Extract PDF URL and questions from request
+        pdf_url = request.documents
+        questions = request.questions
+
+        print(f"Processing PDF: {pdf_url}")
+        print(f"Number of questions: {len(questions)}")
+
+        print("🔄 Parsing PDF...")
+        parser_instance = PDFParser(api_key=LLAMA_CLOUD_API_KEY)
+        result = parser_instance.parse_pdf(pdf_url)
+
+        # === Chunking and GraphRAG Processing ===
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
+        docs = document_splitter(text_splitter, result)
+
+        # Initialize GraphRAG
+        graph_rag = GraphRAG()
+        graph_rag.process_documents(docs)
+        print("✅ GraphRAG processing completed")
+
+        # Function to process a single question
+        def process_single_question(question_data):
+            index, question = question_data
+            try:
+                print(f"🔍 Processing question {index + 1}: {question[:50]}...")
+                response = graph_rag.query(question)
+
+                # Handle AIMessage objects specifically
+                if isinstance(response, AIMessage):
+                    answer_text = response.content
+                elif isinstance(response, str):
+                    answer_text = response
+                else:
+                    answer_text = str(response)
+
+                print(f"✅ Question {index + 1} answered")
+                return (index, answer_text)
+            except Exception as e:
+                print(f"❌ Error processing question {index + 1}: {str(e)}")
+                return (index, f"Error processing question: {str(e)}")
+
+        # Process all questions concurrently
+        print("🚀 Starting concurrent processing of all questions...")
+
+        # Use ThreadPoolExecutor to run queries concurrently
+        with ThreadPoolExecutor(max_workers=min(len(questions), 10)) as executor:
+            # Submit all questions with their indices
+            question_data = list(enumerate(questions))
+            future_to_question = {
+                executor.submit(process_single_question, q_data): q_data
+                for q_data in question_data
+            }
+
+            # Collect results with their original indices
+            results = []
+            for future in future_to_question:
+                try:
+                    index, answer = future.result()
+                    results.append((index, answer))
+                except Exception as e:
+                    question_index = future_to_question[future][0]
+                    results.append((question_index, f"Error processing question: {str(e)}"))
+
+        # Sort results by original index to maintain order
+        results.sort(key=lambda x: x[0])
+        answers = [answer for _, answer in results]
+
+        print("✅ All questions processed successfully")
+
+        return JSONResponse(content={"answers": answers})
+
+    except Exception as e:
+        print(f"❌ Error in hackrx_run: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
